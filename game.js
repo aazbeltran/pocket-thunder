@@ -89,33 +89,7 @@ const MOD_DEFINITIONS = {
 
         // Place jackpot on board creation
         onBoardCreate(game) {
-            game.jackpotPosition = null;
-
-            // Get positions occupied by other mods
-            const occupiedPositions = new Set();
-            game.activeMods.forEach(modId => {
-                const mod = MOD_DEFINITIONS[modId];
-                if (mod.getOccupiedPositions && modId !== 'jackpot') {
-                    mod.getOccupiedPositions(game).forEach(pos => occupiedPositions.add(pos));
-                }
-            });
-
-            // Generate available positions
-            const availablePositions = [];
-            for (let row = 0; row < ROWS; row++) {
-                for (let col = 0; col < COLS; col++) {
-                    const pos = `${row},${col}`;
-                    if (!occupiedPositions.has(pos)) {
-                        availablePositions.push(pos);
-                    }
-                }
-            }
-
-            // Pick one random position
-            if (availablePositions.length > 0) {
-                const randomIndex = Math.floor(Math.random() * availablePositions.length);
-                game.jackpotPosition = availablePositions[randomIndex];
-            }
+            game.jackpotPosition = game.selectRandomAvailablePosition('jackpot');
         },
 
         // Check for jackpot trigger after disc is dropped
@@ -129,6 +103,40 @@ const MOD_DEFINITIONS = {
         // Get occupied positions
         getOccupiedPositions(game) {
             return game.jackpotPosition ? new Set([game.jackpotPosition]) : new Set();
+        }
+    },
+
+    michiAlien: {
+        id: 'michiAlien',
+        name: 'Michi Alien',
+        emoji: '👽',
+        description: 'Un OVNI con gato secuestra fichas de ambos jugadores!',
+
+        // Constants
+        MIN_ABDUCT: 4,
+        MAX_ABDUCT: 5,
+
+        // Initialize mod state
+        onCreate(game) {
+            game.alienSlotPosition = null;
+        },
+
+        // Place single hidden slot on board creation
+        onBoardCreate(game) {
+            game.alienSlotPosition = game.selectRandomAvailablePosition('michiAlien');
+        },
+
+        // Check for alien trigger after disc is dropped
+        async onDiscDropped(game, row, col, player) {
+            if (game.alienSlotPosition === `${row},${col}`) {
+                game.alienSlotPosition = null;
+                await game.triggerAlienAbduction(row, col);
+            }
+        },
+
+        // Get occupied positions (for other mods to avoid)
+        getOccupiedPositions(game) {
+            return game.alienSlotPosition ? new Set([game.alienSlotPosition]) : new Set();
         }
     }
 };
@@ -387,12 +395,16 @@ class Connect4Game {
         // Hide all mod-specific instructions
         const bombInstruction = document.querySelector('.instruction-bombs');
         const jackpotInstruction = document.querySelector('.instruction-jackpot');
+        const alienInstruction = document.querySelector('.instruction-alien');
 
         if (bombInstruction) {
             bombInstruction.style.display = this.activeMods.has('bombas') ? 'flex' : 'none';
         }
         if (jackpotInstruction) {
             jackpotInstruction.style.display = this.activeMods.has('jackpot') ? 'flex' : 'none';
+        }
+        if (alienInstruction) {
+            alienInstruction.style.display = this.activeMods.has('michiAlien') ? 'flex' : 'none';
         }
     }
 
@@ -478,6 +490,22 @@ class Connect4Game {
                     gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + i * 0.1 + 0.3);
                     osc.start(this.audioContext.currentTime + i * 0.1);
                     osc.stop(this.audioContext.currentTime + i * 0.1 + 0.3);
+                });
+                break;
+            case 'alien':
+                // Mysterious alien warble sound (X-Files style)
+                const alienNotes = [440, 554, 659, 880, 659, 554];  // A4 -> C#5 -> E5 -> A5 -> back down
+                alienNotes.forEach((freq, i) => {
+                    const osc = this.audioContext.createOscillator();
+                    const gain = this.audioContext.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.audioContext.destination);
+                    osc.type = 'sine';  // Smooth, ethereal tone
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.2, this.audioContext.currentTime + i * 0.15);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + i * 0.15 + 0.3);
+                    osc.start(this.audioContext.currentTime + i * 0.15);
+                    osc.stop(this.audioContext.currentTime + i * 0.15 + 0.3);
                 });
                 break;
         }
@@ -683,6 +711,286 @@ class Connect4Game {
         this.statusElement.classList.remove('bomb-message');
     }
 
+    /* ============================================
+       MICHI ALIEN UFO ABDUCTION METHODS
+       ============================================ */
+
+    /**
+     * Create UFO DOM element with cat passenger
+     * @returns {HTMLElement} UFO element ready to be added to DOM
+     */
+    createUFOElement() {
+        const ufo = document.createElement('div');
+        ufo.className = 'alien-ufo';
+
+        const ship = document.createElement('span');
+        ship.className = 'alien-ship';
+        ship.textContent = '🛸';
+
+        const cat = document.createElement('div');
+        cat.className = 'alien-cat';
+        cat.textContent = '🐱';
+
+        ufo.appendChild(ship);
+        ufo.appendChild(cat);
+
+        return ufo;
+    }
+
+    /**
+     * Select random discs from BOTH players to abduct
+     * @param {Array} excludePosition - [row, col] to exclude (trigger disc)
+     * @returns {Array} Array of {row, col, player} objects
+     */
+    selectAbductionTargets(excludePosition) {
+        // Collect all discs from both players with their owner info
+        let allDiscs = [];
+
+        this.playerCells[PLAYER_1].forEach(([row, col]) => {
+            allDiscs.push({ row, col, player: PLAYER_1 });
+        });
+
+        this.playerCells[PLAYER_2].forEach(([row, col]) => {
+            allDiscs.push({ row, col, player: PLAYER_2 });
+        });
+
+        // Filter out the triggering disc
+        if (excludePosition) {
+            allDiscs = allDiscs.filter(
+                disc => !(disc.row === excludePosition[0] && disc.col === excludePosition[1])
+            );
+        }
+
+        if (allDiscs.length === 0) return [];
+
+        // Shuffle and pick 4-5 random discs
+        this.shuffleArray(allDiscs);
+        const { MIN_ABDUCT, MAX_ABDUCT } = MOD_DEFINITIONS.michiAlien;
+        const abductCount = Math.min(
+            Math.floor(Math.random() * (MAX_ABDUCT - MIN_ABDUCT + 1)) + MIN_ABDUCT,
+            allDiscs.length
+        );
+
+        return allDiscs.slice(0, abductCount);
+    }
+
+    /**
+     * Fly UFO across the board to trigger column
+     * @param {HTMLElement} ufoElement - UFO DOM element
+     * @param {number} triggerCol - Column where slot was activated
+     * @returns {Promise<void>} Resolves when UFO reaches position
+     */
+    async flyUFOAcross(ufoElement, triggerCol) {
+        const boardWrapper = document.querySelector('.board-wrapper');
+        boardWrapper.appendChild(ufoElement);
+
+        // Position UFO above trigger column
+        const triggerCell = this.getCellElement(0, triggerCol);
+        const cellRect = triggerCell.getBoundingClientRect();
+        const wrapperRect = boardWrapper.getBoundingClientRect();
+
+        // Calculate target X position (center of column relative to wrapper)
+        const targetX = cellRect.left - wrapperRect.left + cellRect.width / 2;
+
+        // Start off-screen left
+        ufoElement.style.left = '-150px';
+        ufoElement.style.top = '-80px';
+
+        // Trigger reflow to ensure initial position is set
+        ufoElement.offsetHeight;
+
+        // Animate to target position
+        ufoElement.style.transform = `translateX(${targetX + 150}px)`;
+
+        // Wait for fly-in animation
+        await new Promise(resolve => setTimeout(resolve, 1200));
+    }
+
+    /**
+     * Abduct discs with tractor beam animation
+     * Updates board state SYNCHRONOUSLY before animations
+     * @param {Array} targets - Array of {row, col, player} to abduct
+     * @param {HTMLElement} ufoElement - UFO element for beam effect
+     * @returns {Promise<Array>} Array of {player, originalCol} for relocation
+     */
+    async abductDiscs(targets, ufoElement) {
+        if (targets.length === 0) return [];
+
+        // Show tractor beam
+        ufoElement.classList.add('alien-beam-active');
+
+        const abductedData = [];
+        const affectedColumns = new Set();
+
+        // STEP 1: Update board state SYNCHRONOUSLY (before any animations)
+        targets.forEach(({ row, col, player }) => {
+            // Store data for relocation
+            abductedData.push({ player, originalCol: col });
+
+            // Clear board state immediately
+            this.board[row][col] = EMPTY;
+
+            // Remove from playerCells tracking
+            const idx = this.playerCells[player].findIndex(
+                pos => pos[0] === row && pos[1] === col
+            );
+            if (idx !== -1) {
+                this.playerCells[player].splice(idx, 1);
+            }
+
+            affectedColumns.add(col);
+        });
+
+        // STEP 2: Apply gravity SYNCHRONOUSLY to all affected columns
+        affectedColumns.forEach(col => {
+            this.applyGravitySyncBoardOnly(col);
+        });
+
+        // STEP 3: Animate beam-up effect (staggered, non-blocking)
+        targets.forEach(({ row, col }, index) => {
+            setTimeout(() => {
+                const cell = this.getCellElement(row, col);
+                cell.classList.add('alien-beam-target');
+
+                // Remove visual classes after animation
+                setTimeout(() => {
+                    cell.classList.remove('red', 'yellow', 'alien-beam-target', 'drop-animation');
+                }, 600);
+            }, index * 150);
+        });
+
+        // Wait for all beam-up animations to complete
+        const totalAbductTime = (targets.length - 1) * 150 + 600 + 100;
+        await new Promise(resolve => setTimeout(resolve, totalAbductTime));
+
+        // Hide tractor beam
+        ufoElement.classList.remove('alien-beam-active');
+
+        return abductedData;
+    }
+
+    /**
+     * Relocate abducted discs to random columns with beam-down animation
+     * @param {Array} abductedData - Array of {player, originalCol}
+     * @returns {Promise<void>}
+     */
+    async relocateAbductedDiscs(abductedData) {
+        if (abductedData.length === 0) return;
+
+        const relocations = [];
+
+        // STEP 1: Calculate new positions and update state SYNCHRONOUSLY
+        abductedData.forEach(({ player }) => {
+            // Find a random column with space
+            let attempts = 0;
+            let targetCol = Math.floor(Math.random() * COLS);
+            let targetRow = this.getLowestEmptyRow(targetCol);
+
+            // If chosen column is full, try others
+            while (targetRow === -1 && attempts < COLS) {
+                targetCol = (targetCol + 1) % COLS;
+                targetRow = this.getLowestEmptyRow(targetCol);
+                attempts++;
+            }
+
+            // If we found a valid position
+            if (targetRow !== -1) {
+                // Update board state immediately
+                this.board[targetRow][targetCol] = player;
+                this.playerCells[player].push([targetRow, targetCol]);
+                this.moveCount++;
+
+                relocations.push({ row: targetRow, col: targetCol, player });
+            }
+        });
+
+        // STEP 2: Re-render board to show state changes
+        this.rerenderBoard();
+
+        // STEP 3: Apply beam-down animations (staggered)
+        relocations.forEach(({ row, col }, index) => {
+            setTimeout(() => {
+                const cell = this.getCellElement(row, col);
+                cell.classList.add('alien-beam-down');
+
+                // Remove animation class after completion
+                setTimeout(() => {
+                    cell.classList.remove('alien-beam-down');
+                }, 600);
+            }, index * 200);
+        });
+
+        // Wait for all relocations to complete
+        const totalRelocateTime = (relocations.length - 1) * 200 + 600 + 100;
+        await new Promise(resolve => setTimeout(resolve, totalRelocateTime));
+    }
+
+    /**
+     * Remove UFO element with exit animation
+     * @param {HTMLElement} ufoElement - UFO to remove
+     * @returns {Promise<void>}
+     */
+    async removeUFOElement(ufoElement) {
+        // Trigger exit animation
+        ufoElement.classList.add('alien-ufo-exit');
+
+        // Wait for animation and remove
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        if (ufoElement.parentNode) {
+            ufoElement.parentNode.removeChild(ufoElement);
+        }
+    }
+
+    /**
+     * Main orchestrator: Trigger alien abduction effect
+     * Coordinates UFO arrival, disc abduction, and relocation
+     * @param {number} row - Trigger position row
+     * @param {number} col - Trigger position column
+     */
+    async triggerAlienAbduction(row, col) {
+        // Play alien sound
+        this.playSound('alien');
+
+        // Show initial message
+        this.statusElement.textContent = '👽 OVNI DETECTADO! 🛸🐱';
+        this.statusElement.classList.add('alien-message');
+
+        // Phase 1: UFO arrival
+        const ufo = this.createUFOElement();
+        await this.flyUFOAcross(ufo, col);
+
+        // Phase 2: Select targets from BOTH players
+        const targets = this.selectAbductionTargets([row, col]);
+
+        if (targets.length === 0) {
+            this.statusElement.textContent = '👽 No hay fichas para abducir! 🐱';
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            await this.removeUFOElement(ufo);
+            this.statusElement.textContent = '';
+            this.statusElement.classList.remove('alien-message');
+            return;
+        }
+
+        // Phase 3: Abduct discs with beam animation
+        this.statusElement.textContent = `👽 Abduciendo ${targets.length} fichas! 🛸`;
+        const abductedData = await this.abductDiscs(targets, ufo);
+
+        await new Promise(resolve => setTimeout(resolve, 400));
+
+        // Phase 4: Relocate discs to random positions
+        this.statusElement.textContent = '👽 Caos espacial! 🐱✨';
+        await this.relocateAbductedDiscs(abductedData);
+
+        // Phase 5: UFO exit
+        await this.removeUFOElement(ufo);
+
+        // Clear message after delay
+        await new Promise(resolve => setTimeout(resolve, 800));
+        this.statusElement.textContent = '';
+        this.statusElement.classList.remove('alien-message');
+    }
+
     /**
      * Remove random discs from a player's placed pieces
      * IMPORTANT: Updates board state SYNCHRONOUSLY first, then animates visually
@@ -706,14 +1014,9 @@ class Connect4Game {
                 return;
             }
 
-            // Shuffle eligible positions to select random discs
+            // Shuffle and select random discs to remove
             const shuffled = [...eligiblePositions];
-            for (let i = shuffled.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-            }
-
-            // Take up to 'count' positions to remove
+            this.shuffleArray(shuffled);
             const toRemove = shuffled.slice(0, Math.min(count, shuffled.length));
             const removedCount = toRemove.length;
 
@@ -814,6 +1117,58 @@ class Connect4Game {
                 }
             }
         }
+    }
+
+    /* ============================================
+       UTILITY METHODS
+       ============================================ */
+
+    /**
+     * Shuffle array in place using Fisher-Yates algorithm
+     * @param {Array} array - Array to shuffle (mutated in place)
+     * @returns {Array} The shuffled array (same reference)
+     */
+    shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    /**
+     * Select a random available position on the board
+     * Excludes positions occupied by other mods
+     * @param {string} excludeModId - Mod ID to exclude from position check
+     * @returns {string|null} Position string "row,col" or null if no positions available
+     */
+    selectRandomAvailablePosition(excludeModId) {
+        // Get positions occupied by other mods
+        const occupiedPositions = new Set();
+        this.activeMods.forEach(modId => {
+            const mod = MOD_DEFINITIONS[modId];
+            if (mod.getOccupiedPositions && modId !== excludeModId) {
+                mod.getOccupiedPositions(this).forEach(pos => occupiedPositions.add(pos));
+            }
+        });
+
+        // Generate available positions
+        const availablePositions = [];
+        for (let row = 0; row < ROWS; row++) {
+            for (let col = 0; col < COLS; col++) {
+                const pos = `${row},${col}`;
+                if (!occupiedPositions.has(pos)) {
+                    availablePositions.push(pos);
+                }
+            }
+        }
+
+        // Pick one random position
+        if (availablePositions.length > 0) {
+            const randomIndex = Math.floor(Math.random() * availablePositions.length);
+            return availablePositions[randomIndex];
+        }
+        return null;
     }
 
     /**
