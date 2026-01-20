@@ -62,6 +62,8 @@
 
         <div id="game-status" class="status"></div>
 
+        <div class="active-mods" id="active-mods"></div>
+
         <div class="board-wrapper">
             <div class="board-frame">
                 <div id="board" class="board"></div>
@@ -102,11 +104,11 @@
                     <span class="instruction-icon">🏆</span>
                     <span>El primero en llegar a 120 puntos gana!</span>
                 </div>
-                <div class="instruction-item">
+                <div class="instruction-item instruction-bombs">
                     <span class="instruction-icon">💣</span>
                     <span>Cuidado! Hay bombas escondidas que quitan fichas!</span>
                 </div>
-                <div class="instruction-item">
+                <div class="instruction-item instruction-jackpot">
                     <span class="instruction-icon">🎰</span>
                     <span>Encuentra el jackpot y llena toda la columna!</span>
                 </div>
@@ -146,6 +148,18 @@
             <button class="btn btn-new-championship" id="new-championship-btn">
                 <span class="btn-icon">🎮</span>
                 <span>Nuevo Campeonato</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="mod-selection-modal" class="modal">
+        <div class="modal-content mod-selection-content">
+            <h2 class="mod-selection-title">Elige tus Mods</h2>
+            <p class="mod-selection-subtitle">Selecciona hasta 2 modificadores para tu partida</p>
+            <div class="mod-grid" id="mod-grid"></div>
+            <button class="btn btn-start-game" id="start-game-btn">
+                <span class="btn-icon">🚀</span>
+                <span>Comenzar!</span>
             </button>
         </div>
     </div>

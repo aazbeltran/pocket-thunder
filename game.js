@@ -17,9 +17,121 @@ const MAX_ROUND_POINTS = 30;
 const MIN_ROUND_POINTS = 10;
 const MIN_MOVES_TO_WIN = 4;
 
-// Bomb mechanics constants
-const BOMB_PERCENTAGE = 0.15;  // 15% of cells are bombs
-const DISCS_TO_REMOVE = 2;     // Remove 2 discs on explosion
+/* ============================================
+   MOD SYSTEM - Lightweight mod definitions
+   ============================================ */
+
+const MOD_DEFINITIONS = {
+    bombas: {
+        id: 'bombas',
+        name: 'Bombas',
+        emoji: '💣',
+        description: 'Cuidado! Hay bombas escondidas que quitan fichas!',
+
+        // Constants
+        BOMB_PERCENTAGE: 0.15,
+        DISCS_TO_REMOVE: 2,
+
+        // Initialize mod state
+        onCreate(game) {
+            game.bombs = new Set();
+        },
+
+        // Place bombs on board creation
+        onBoardCreate(game) {
+            game.bombs.clear();
+            const totalCells = COLS * ROWS;
+            const bombCount = Math.floor(totalCells * this.BOMB_PERCENTAGE);
+
+            // Generate all possible positions
+            const positions = [];
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    positions.push(`${row},${col}`);
+                }
+            }
+
+            // Shuffle and pick bombCount positions
+            for (let i = positions.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [positions[i], positions[j]] = [positions[j], positions[i]];
+            }
+
+            for (let i = 0; i < bombCount; i++) {
+                game.bombs.add(positions[i]);
+            }
+        },
+
+        // Check for bomb trigger after disc is dropped
+        async onDiscDropped(game, row, col, player) {
+            if (game.bombs.has(`${row},${col}`)) {
+                game.bombs.delete(`${row},${col}`);
+                await game.triggerExplosion(row, col);
+            }
+        },
+
+        // Get occupied positions (for other mods to avoid)
+        getOccupiedPositions(game) {
+            return game.bombs || new Set();
+        }
+    },
+
+    jackpot: {
+        id: 'jackpot',
+        name: 'Jackpot',
+        emoji: '🎰',
+        description: 'Encuentra el jackpot y llena toda la columna!',
+
+        // Initialize mod state
+        onCreate(game) {
+            game.jackpotPosition = null;
+        },
+
+        // Place jackpot on board creation
+        onBoardCreate(game) {
+            game.jackpotPosition = null;
+
+            // Get positions occupied by other mods
+            const occupiedPositions = new Set();
+            game.activeMods.forEach(modId => {
+                const mod = MOD_DEFINITIONS[modId];
+                if (mod.getOccupiedPositions && modId !== 'jackpot') {
+                    mod.getOccupiedPositions(game).forEach(pos => occupiedPositions.add(pos));
+                }
+            });
+
+            // Generate available positions
+            const availablePositions = [];
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    const pos = `${row},${col}`;
+                    if (!occupiedPositions.has(pos)) {
+                        availablePositions.push(pos);
+                    }
+                }
+            }
+
+            // Pick one random position
+            if (availablePositions.length > 0) {
+                const randomIndex = Math.floor(Math.random() * availablePositions.length);
+                game.jackpotPosition = availablePositions[randomIndex];
+            }
+        },
+
+        // Check for jackpot trigger after disc is dropped
+        async onDiscDropped(game, row, col, player) {
+            if (game.jackpotPosition === `${row},${col}`) {
+                game.jackpotPosition = null;
+                await game.triggerJackpot(row, col);
+            }
+        },
+
+        // Get occupied positions
+        getOccupiedPositions(game) {
+            return game.jackpotPosition ? new Set([game.jackpotPosition]) : new Set();
+        }
+    }
+};
 
 class Connect4Game {
     constructor() {
@@ -31,13 +143,13 @@ class Connect4Game {
         this.scores = { 1: 0, 2: 0 };
         this.roundWins = { 1: 0, 2: 0 };
 
-        // Bomb mechanics state
-        this.bombs = new Set();            // Set of "row,col" strings for O(1) lookup
-        this.playerCells = { 1: [], 2: [] };  // Track each player's disc positions
-        this.isProcessingMove = false;     // Prevent clicks during explosions
+        // Mod system
+        this.activeMods = new Set();       // Set of active mod IDs
+        this.modsInitialized = false;      // Track if mods have been selected
 
-        // Jackpot mechanics state
-        this.jackpotPosition = null;       // Single "row,col" string for jackpot
+        // Shared state for mods
+        this.playerCells = { 1: [], 2: [] };  // Track each player's disc positions
+        this.isProcessingMove = false;     // Prevent clicks during animations
 
         // DOM Elements
         this.boardElement = document.getElementById('board');
@@ -68,6 +180,12 @@ class Connect4Game {
         this.confettiContainer = document.getElementById('confetti');
         this.starsContainer = document.getElementById('stars-bg');
 
+        // Mod selection modal elements
+        this.modSelectionModal = document.getElementById('mod-selection-modal');
+        this.modGrid = document.getElementById('mod-grid');
+        this.startGameBtn = document.getElementById('start-game-btn');
+        this.activeModsContainer = document.getElementById('active-mods');
+
         // Audio context for sound effects
         this.audioContext = null;
 
@@ -79,10 +197,7 @@ class Connect4Game {
      */
     init() {
         this.createStars();
-        this.createBoard();
-        this.renderBoard();
         this.updateScoreboard();
-        this.updateTurnIndicator();
 
         // Event listeners
         this.resetButton.addEventListener('click', () => this.resetRound());
@@ -90,8 +205,195 @@ class Connect4Game {
         this.continueButton.addEventListener('click', () => this.continueGame());
         this.newChampionshipBtn.addEventListener('click', () => this.newGame());
 
+        // Mod selection event listeners
+        if (this.startGameBtn) {
+            this.startGameBtn.addEventListener('click', () => this.confirmModSelection());
+        }
+
         // Initialize audio on first interaction
         document.addEventListener('click', () => this.initAudio(), { once: true });
+
+        // Show mod selection modal on start
+        this.showModSelectionModal();
+    }
+
+    /* ============================================
+       MOD SYSTEM METHODS
+       ============================================ */
+
+    /**
+     * Show the mod selection modal
+     */
+    showModSelectionModal() {
+        if (!this.modGrid || !this.modSelectionModal) return;
+
+        // Clear existing cards
+        while (this.modGrid.firstChild) {
+            this.modGrid.removeChild(this.modGrid.firstChild);
+        }
+
+        // Create mod cards using safe DOM methods
+        Object.values(MOD_DEFINITIONS).forEach(mod => {
+            const card = document.createElement('div');
+            card.className = 'mod-card';
+            card.dataset.modId = mod.id;
+
+            const emoji = document.createElement('span');
+            emoji.className = 'mod-emoji';
+            emoji.textContent = mod.emoji;
+
+            const name = document.createElement('div');
+            name.className = 'mod-name';
+            name.textContent = mod.name;
+
+            const description = document.createElement('div');
+            description.className = 'mod-description';
+            description.textContent = mod.description;
+
+            card.appendChild(emoji);
+            card.appendChild(name);
+            card.appendChild(description);
+
+            card.addEventListener('click', () => this.toggleModCard(card, mod.id));
+            this.modGrid.appendChild(card);
+        });
+
+        // Show modal
+        this.modSelectionModal.classList.add('show');
+    }
+
+    /**
+     * Toggle mod card selection
+     */
+    toggleModCard(card, modId) {
+        const selectedCards = this.modGrid.querySelectorAll('.mod-card.selected');
+
+        if (card.classList.contains('selected')) {
+            // Deselect
+            card.classList.remove('selected');
+        } else if (selectedCards.length < 2) {
+            // Select (max 2)
+            card.classList.add('selected');
+        }
+
+        // Update card states (enable/disable)
+        this.updateModCardStates();
+    }
+
+    /**
+     * Update mod card states (disable unselected when max reached)
+     */
+    updateModCardStates() {
+        const selectedCards = this.modGrid.querySelectorAll('.mod-card.selected');
+        const allCards = this.modGrid.querySelectorAll('.mod-card');
+
+        if (selectedCards.length >= 2) {
+            // Disable unselected cards
+            allCards.forEach(card => {
+                if (!card.classList.contains('selected')) {
+                    card.classList.add('disabled');
+                }
+            });
+        } else {
+            // Enable all cards
+            allCards.forEach(card => card.classList.remove('disabled'));
+        }
+    }
+
+    /**
+     * Confirm mod selection and start game
+     */
+    confirmModSelection() {
+        const selectedCards = this.modGrid.querySelectorAll('.mod-card.selected');
+        const modIds = Array.from(selectedCards).map(card => card.dataset.modId);
+
+        // Activate selected mods
+        this.activateMods(modIds);
+
+        // Hide modal
+        this.modSelectionModal.classList.remove('show');
+
+        // Update UI
+        this.updateActiveModsDisplay();
+        this.updateInstructions();
+
+        // Start the game
+        this.modsInitialized = true;
+        this.createBoard();
+        this.renderBoard();
+        this.updateTurnIndicator();
+    }
+
+    /**
+     * Activate selected mods
+     */
+    activateMods(modIds) {
+        this.activeMods.clear();
+
+        modIds.forEach(modId => {
+            if (MOD_DEFINITIONS[modId]) {
+                this.activeMods.add(modId);
+                const mod = MOD_DEFINITIONS[modId];
+
+                // Call mod's onCreate hook
+                if (mod.onCreate) {
+                    mod.onCreate(this);
+                }
+            }
+        });
+    }
+
+    /**
+     * Update the active mods display badges
+     */
+    updateActiveModsDisplay() {
+        if (!this.activeModsContainer) return;
+
+        // Clear existing badges
+        while (this.activeModsContainer.firstChild) {
+            this.activeModsContainer.removeChild(this.activeModsContainer.firstChild);
+        }
+
+        if (this.activeMods.size === 0) {
+            const badge = document.createElement('div');
+            badge.className = 'mod-badge mod-badge-none';
+            badge.textContent = 'Sin Mods';
+            this.activeModsContainer.appendChild(badge);
+            return;
+        }
+
+        this.activeMods.forEach(modId => {
+            const mod = MOD_DEFINITIONS[modId];
+            const badge = document.createElement('div');
+            badge.className = 'mod-badge';
+
+            const emoji = document.createElement('span');
+            emoji.className = 'mod-badge-emoji';
+            emoji.textContent = mod.emoji;
+
+            const name = document.createElement('span');
+            name.textContent = mod.name;
+
+            badge.appendChild(emoji);
+            badge.appendChild(name);
+            this.activeModsContainer.appendChild(badge);
+        });
+    }
+
+    /**
+     * Update instructions to show only active mod rules
+     */
+    updateInstructions() {
+        // Hide all mod-specific instructions
+        const bombInstruction = document.querySelector('.instruction-bombs');
+        const jackpotInstruction = document.querySelector('.instruction-jackpot');
+
+        if (bombInstruction) {
+            bombInstruction.style.display = this.activeMods.has('bombas') ? 'flex' : 'none';
+        }
+        if (jackpotInstruction) {
+            jackpotInstruction.style.display = this.activeMods.has('jackpot') ? 'flex' : 'none';
+        }
     }
 
     /**
@@ -210,75 +512,15 @@ class Connect4Game {
             }
         }
         this.moveCount = 0;
-        this.placeBombs();
-        this.placeJackpot();
         this.playerCells = { 1: [], 2: [] };
-    }
 
-    /**
-     * Place bombs randomly on the board
-     * Uses Fisher-Yates-like selection to ensure unique positions
-     */
-    placeBombs() {
-        this.bombs.clear();
-        const totalCells = COLS * ROWS;
-        const bombCount = Math.floor(totalCells * BOMB_PERCENTAGE);
-
-        // Generate all possible positions
-        const positions = [];
-        for (let row = 0; row < ROWS; row++) {
-            for (let col = 0; col < COLS; col++) {
-                positions.push(`${row},${col}`);
+        // Call onBoardCreate hook for all active mods
+        this.activeMods.forEach(modId => {
+            const mod = MOD_DEFINITIONS[modId];
+            if (mod.onBoardCreate) {
+                mod.onBoardCreate(this);
             }
-        }
-
-        // Shuffle and pick bombCount positions
-        for (let i = positions.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [positions[i], positions[j]] = [positions[j], positions[i]];
-        }
-
-        for (let i = 0; i < bombCount; i++) {
-            this.bombs.add(positions[i]);
-        }
-    }
-
-    /**
-     * Check if a cell contains a bomb
-     */
-    isBomb(row, col) {
-        return this.bombs.has(`${row},${col}`);
-    }
-
-    /**
-     * Place jackpot at a random position (not overlapping with bombs)
-     */
-    placeJackpot() {
-        this.jackpotPosition = null;
-
-        // Generate all possible positions that aren't bombs
-        const availablePositions = [];
-        for (let row = 0; row < ROWS; row++) {
-            for (let col = 0; col < COLS; col++) {
-                const pos = `${row},${col}`;
-                if (!this.bombs.has(pos)) {
-                    availablePositions.push(pos);
-                }
-            }
-        }
-
-        // Pick one random position for the jackpot
-        if (availablePositions.length > 0) {
-            const randomIndex = Math.floor(Math.random() * availablePositions.length);
-            this.jackpotPosition = availablePositions[randomIndex];
-        }
-    }
-
-    /**
-     * Check if a cell contains the jackpot
-     */
-    isJackpot(row, col) {
-        return this.jackpotPosition === `${row},${col}`;
+        });
     }
 
     /**
@@ -422,7 +664,8 @@ class Connect4Game {
 
                 // Remove player discs (excluding the one that just triggered the bomb)
                 const player = this.currentPlayer;
-                const removed = this.removePlayerDiscs(player, DISCS_TO_REMOVE, [row, col]);
+                const discsToRemove = MOD_DEFINITIONS.bombas.DISCS_TO_REMOVE;
+                const removed = this.removePlayerDiscs(player, discsToRemove, [row, col]);
 
                 // Show appropriate Spanish message
                 if (removed === 0) {
@@ -596,7 +839,7 @@ class Connect4Game {
 
     /**
      * Drop a disc
-     * Handles bomb detection and explosion effects
+     * Handles mod effects via lifecycle hooks
      */
     async dropDisc(row, col) {
         const player = this.currentPlayer;
@@ -605,7 +848,7 @@ class Connect4Game {
         this.board[row][col] = player;
         this.moveCount++;
 
-        // Track position for potential bomb removal
+        // Track position for potential mod effects
         this.playerCells[player].push([row, col]);
 
         const cell = this.getCellElement(row, col);
@@ -614,28 +857,15 @@ class Connect4Game {
 
         this.playSound('drop');
 
-        // Check if player landed on a bomb
-        if (this.isBomb(row, col)) {
-            // Remove the bomb so it doesn't trigger again
-            this.bombs.delete(`${row},${col}`);
-
-            // Wait for explosion to complete before continuing
-            await this.triggerExplosion(row, col);
-
-            // After explosion, check if game should continue
-            // Note: The disc that triggered the bomb stays, only other discs are removed
+        // Call onDiscDropped hook for all active mods
+        for (const modId of this.activeMods) {
+            const mod = MOD_DEFINITIONS[modId];
+            if (mod.onDiscDropped) {
+                await mod.onDiscDropped(this, row, col, player);
+            }
         }
 
-        // Check if player landed on the jackpot
-        if (this.isJackpot(row, col)) {
-            // Consume the jackpot so it doesn't trigger again
-            this.jackpotPosition = null;
-
-            // Wait for jackpot column fill to complete
-            await this.triggerJackpot(row, col);
-        }
-
-        // Check win (after any explosion or jackpot effects)
+        // Check win (after any mod effects)
         if (this.checkWin(row, col)) {
             this.handleWin();
             return;
@@ -867,18 +1097,21 @@ class Connect4Game {
     }
 
     /**
-     * Start new game (reset everything)
+     * Start new game (reset everything and show mod selection)
      */
     newGame() {
         this.scores = { 1: 0, 2: 0 };
         this.roundWins = { 1: 0, 2: 0 };
         this.currentPlayer = PLAYER_1;
+        this.modsInitialized = false;
 
         this.winnerModal.classList.remove('show');
         this.championModal.classList.remove('show');
 
         this.updateScoreboard();
-        this.resetRound();
+
+        // Show mod selection modal for new game
+        this.showModSelectionModal();
     }
 
     /**
