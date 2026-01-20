@@ -639,116 +639,181 @@ class Connect4Game {
      * @param {number} row - The row where the bomb was triggered
      * @param {number} col - The column where the bomb was triggered
      */
-    triggerExplosion(row, col) {
-        return new Promise((resolve) => {
-            const cell = this.getCellElement(row, col);
-            const boardFrame = document.querySelector('.board-frame');
+    async triggerExplosion(row, col) {
+        const cell = this.getCellElement(row, col);
+        const boardFrame = document.querySelector('.board-frame');
 
-            // Play explosion sound
-            this.playSound('explosion');
+        // Play explosion sound
+        this.playSound('explosion');
 
-            // Add explosion animation to cell
-            cell.classList.add('explosion');
+        // Add explosion animation to cell
+        cell.classList.add('explosion');
 
-            // Add screen shake effect
-            boardFrame.classList.add('shake');
+        // Add screen shake effect
+        boardFrame.classList.add('shake');
 
-            // Show bomb message
-            this.statusElement.textContent = '💣 BOOM! 💣';
-            this.statusElement.classList.add('bomb-message');
+        // Show bomb message
+        this.statusElement.textContent = '💣 BOOM! 💣';
+        this.statusElement.classList.add('bomb-message');
 
-            // Remove explosion effects after animation
-            setTimeout(() => {
-                cell.classList.remove('explosion');
-                boardFrame.classList.remove('shake');
+        // Wait for initial explosion animation
+        await new Promise(resolve => setTimeout(resolve, 600));
 
-                // Remove player discs (excluding the one that just triggered the bomb)
-                const player = this.currentPlayer;
-                const discsToRemove = MOD_DEFINITIONS.bombas.DISCS_TO_REMOVE;
-                const removed = this.removePlayerDiscs(player, discsToRemove, [row, col]);
+        cell.classList.remove('explosion');
+        boardFrame.classList.remove('shake');
 
-                // Show appropriate Spanish message
-                if (removed === 0) {
-                    this.statusElement.textContent = '💣 BOOM! 💣 Tuviste suerte, no tenias fichas!';
-                } else if (removed === 1) {
-                    this.statusElement.textContent = '💣 BOOM! 💣 Perdiste 1 ficha!';
-                } else {
-                    this.statusElement.textContent = `💣 BOOM! 💣 Perdiste ${removed} fichas!`;
-                }
+        // Remove player discs (excluding the one that just triggered the bomb)
+        // This now updates board state SYNCHRONOUSLY before returning
+        const player = this.currentPlayer;
+        const discsToRemove = MOD_DEFINITIONS.bombas.DISCS_TO_REMOVE;
+        const removed = await this.removePlayerDiscs(player, discsToRemove, [row, col]);
 
-                // Clear message after delay and resolve
-                setTimeout(() => {
-                    this.statusElement.textContent = '';
-                    this.statusElement.classList.remove('bomb-message');
-                    resolve();
-                }, 1500);
-            }, 600);
-        });
+        // Show appropriate Spanish message
+        if (removed === 0) {
+            this.statusElement.textContent = '💣 BOOM! 💣 Tuviste suerte, no tenias fichas!';
+        } else if (removed === 1) {
+            this.statusElement.textContent = '💣 BOOM! 💣 Perdiste 1 ficha!';
+        } else {
+            this.statusElement.textContent = `💣 BOOM! 💣 Perdiste ${removed} fichas!`;
+        }
+
+        // Clear message after delay
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        this.statusElement.textContent = '';
+        this.statusElement.classList.remove('bomb-message');
     }
 
     /**
      * Remove random discs from a player's placed pieces
-     * Returns the number of discs actually removed
+     * IMPORTANT: Updates board state SYNCHRONOUSLY first, then animates visually
+     * Returns a Promise that resolves with the number of discs removed after animations complete
      * @param {number} player - The player whose discs to remove
      * @param {number} count - Maximum number of discs to remove
      * @param {Array} excludePosition - [row, col] position to exclude (the bomb trigger disc)
      */
     removePlayerDiscs(player, count, excludePosition = null) {
-        // Filter out the excluded position (the disc that triggered the bomb)
-        let eligiblePositions = this.playerCells[player];
-        if (excludePosition) {
-            eligiblePositions = eligiblePositions.filter(
-                ([r, c]) => !(r === excludePosition[0] && c === excludePosition[1])
-            );
-        }
+        return new Promise((resolve) => {
+            // Filter out the excluded position (the disc that triggered the bomb)
+            let eligiblePositions = this.playerCells[player];
+            if (excludePosition) {
+                eligiblePositions = eligiblePositions.filter(
+                    ([r, c]) => !(r === excludePosition[0] && c === excludePosition[1])
+                );
+            }
 
-        if (eligiblePositions.length === 0) {
-            return 0;
-        }
+            if (eligiblePositions.length === 0) {
+                resolve(0);
+                return;
+            }
 
-        // Shuffle eligible positions to select random discs
-        const shuffled = [...eligiblePositions];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
+            // Shuffle eligible positions to select random discs
+            const shuffled = [...eligiblePositions];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
 
-        // Take up to 'count' positions to remove
-        const toRemove = shuffled.slice(0, Math.min(count, shuffled.length));
-        let removedCount = 0;
+            // Take up to 'count' positions to remove
+            const toRemove = shuffled.slice(0, Math.min(count, shuffled.length));
+            const removedCount = toRemove.length;
 
-        toRemove.forEach(([row, col], index) => {
-            const cell = this.getCellElement(row, col);
+            // Track affected columns for gravity
+            const affectedColumns = new Set();
 
-            // Stagger the removal animations
-            setTimeout(() => {
-                cell.classList.add('disc-removed');
+            // STEP 1: Update board state SYNCHRONOUSLY (before any animations)
+            toRemove.forEach(([row, col]) => {
+                // Clear board state immediately
+                this.board[row][col] = EMPTY;
 
-                // After animation, clear the cell
+                // Remove from playerCells tracking
+                const idx = this.playerCells[player].findIndex(
+                    pos => pos[0] === row && pos[1] === col
+                );
+                if (idx !== -1) {
+                    this.playerCells[player].splice(idx, 1);
+                }
+
+                affectedColumns.add(col);
+            });
+
+            // STEP 2: Apply gravity SYNCHRONOUSLY to all affected columns
+            affectedColumns.forEach(col => {
+                this.applyGravitySyncBoardOnly(col);
+            });
+
+            // STEP 3: Now animate the visual changes (non-blocking)
+            toRemove.forEach(([row, col], index) => {
+                const cell = this.getCellElement(row, col);
+
+                // Stagger the removal animations
                 setTimeout(() => {
-                    // Clear board state
-                    this.board[row][col] = EMPTY;
+                    cell.classList.add('disc-removed');
 
-                    // Remove visual classes
-                    cell.classList.remove('red', 'yellow', 'disc-removed', 'drop-animation');
+                    // After animation, clear visual classes
+                    setTimeout(() => {
+                        cell.classList.remove('red', 'yellow', 'disc-removed', 'drop-animation');
+                    }, 500);
+                }, index * 200);
+            });
 
-                    // Remove from playerCells tracking
-                    const idx = this.playerCells[player].findIndex(
-                        pos => pos[0] === row && pos[1] === col
-                    );
-                    if (idx !== -1) {
-                        this.playerCells[player].splice(idx, 1);
-                    }
-
-                    // Apply gravity - discs above should fall down
-                    this.applyGravity(col);
-                }, 500);
-            }, index * 200);
-
-            removedCount++;
+            // STEP 4: Re-render the board to reflect gravity changes after animations
+            const totalAnimationTime = (toRemove.length - 1) * 200 + 500 + 100;
+            setTimeout(() => {
+                this.rerenderBoard();
+                resolve(removedCount);
+            }, totalAnimationTime);
         });
+    }
 
-        return removedCount;
+    /**
+     * Apply gravity to board state ONLY (no visual updates)
+     * Used for synchronous board state updates before win checks
+     */
+    applyGravitySyncBoardOnly(col) {
+        // Work from bottom to top, filling empty spaces
+        for (let targetRow = ROWS - 1; targetRow >= 0; targetRow--) {
+            if (this.board[targetRow][col] === EMPTY) {
+                // Find the first non-empty cell above
+                for (let sourceRow = targetRow - 1; sourceRow >= 0; sourceRow--) {
+                    if (this.board[sourceRow][col] !== EMPTY) {
+                        const player = this.board[sourceRow][col];
+
+                        // Move the disc in board state only
+                        this.board[targetRow][col] = player;
+                        this.board[sourceRow][col] = EMPTY;
+
+                        // Update player cells tracking
+                        const idx = this.playerCells[player].findIndex(
+                            pos => pos[0] === sourceRow && pos[1] === col
+                        );
+                        if (idx !== -1) {
+                            this.playerCells[player][idx] = [targetRow, col];
+                        }
+
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Re-render the board to match current board state
+     * Used after synchronous board updates to sync visuals
+     */
+    rerenderBoard() {
+        for (let row = 0; row < ROWS; row++) {
+            for (let col = 0; col < COLS; col++) {
+                const cell = this.getCellElement(row, col);
+                cell.classList.remove('red', 'yellow', 'drop-animation', 'disc-removed');
+
+                if (this.board[row][col] === PLAYER_1) {
+                    cell.classList.add('red');
+                } else if (this.board[row][col] === PLAYER_2) {
+                    cell.classList.add('yellow');
+                }
+            }
+        }
     }
 
     /**
@@ -865,8 +930,20 @@ class Connect4Game {
             }
         }
 
-        // Check win (after any mod effects)
-        if (this.checkWin(row, col)) {
+        // After mod effects (bombs, jackpots), the disc might have moved due to gravity
+        // Find the actual position of the disc in this column after all effects
+        let actualRow = row;
+        for (let r = ROWS - 1; r >= 0; r--) {
+            if (this.board[r][col] === player) {
+                // Check if this is likely our disc (in the same column, at or below original position)
+                // Due to gravity, discs can only move DOWN, so check from bottom up
+                actualRow = r;
+                break;
+            }
+        }
+
+        // Check win at the ACTUAL position (after any gravity effects)
+        if (this.checkWin(actualRow, col)) {
             this.handleWin();
             return;
         }
