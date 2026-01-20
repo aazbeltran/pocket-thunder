@@ -1,0 +1,1068 @@
+/* ============================================
+   CONECTA 4 - SUPER FUN KIDS EDITION
+   ============================================ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --red: #ff4757;
+    --red-light: #ff6b7a;
+    --red-dark: #ee3b4a;
+    --yellow: #ffd32a;
+    --yellow-light: #ffe066;
+    --yellow-dark: #f0c419;
+    --board-primary: #3742fa;
+    --board-secondary: #2f3ed8;
+    --board-glow: #5352ed;
+    --bg-primary: #1e0533;
+    --bg-secondary: #2d1b4e;
+    --success: #2ed573;
+    --white: #ffffff;
+    --gold: #ffd700;
+}
+
+body {
+    font-family: 'Nunito', 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, #4a1c6b 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 15px;
+    overflow-x: hidden;
+    position: relative;
+}
+
+/* ============================================
+   ANIMATED STARS BACKGROUND
+   ============================================ */
+
+.stars-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.star {
+    position: absolute;
+    background: white;
+    border-radius: 50%;
+    animation: twinkle var(--duration) ease-in-out infinite;
+    opacity: 0;
+}
+
+@keyframes twinkle {
+    0%, 100% { opacity: 0; transform: scale(0.5); }
+    50% { opacity: 1; transform: scale(1); }
+}
+
+/* ============================================
+   CONFETTI
+   ============================================ */
+
+.confetti-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.confetti {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    animation: confetti-fall var(--fall-duration, 3s) linear forwards;
+}
+
+@keyframes confetti-fall {
+    0% {
+        transform: translateY(-10px) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+/* ============================================
+   GAME CONTAINER
+   ============================================ */
+
+.game-container {
+    text-align: center;
+    max-width: 900px;
+    width: 100%;
+    z-index: 1;
+    position: relative;
+}
+
+/* ============================================
+   RAINBOW TITLE
+   ============================================ */
+
+.title-container {
+    margin-bottom: 15px;
+}
+
+.game-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 3.5rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+.letter {
+    display: inline-block;
+    animation: bounce 0.6s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.1s);
+    text-shadow:
+        3px 3px 0 rgba(0, 0, 0, 0.2),
+        0 0 20px currentColor;
+}
+
+.letter:nth-child(1) { color: #ff6b6b; }
+.letter:nth-child(2) { color: #ffd93d; }
+.letter:nth-child(3) { color: #6bcb77; }
+.letter:nth-child(4) { color: #4d96ff; }
+.letter:nth-child(5) { color: #ff6b6b; }
+.letter:nth-child(6) { color: #ffd93d; }
+.letter:nth-child(7) { color: #c44dff; }
+
+.number {
+    font-size: 4.5rem;
+    color: var(--gold);
+    animation: pulse-glow 1s ease-in-out infinite alternate;
+    text-shadow:
+        0 0 10px var(--gold),
+        0 0 20px var(--gold),
+        0 0 30px var(--gold),
+        0 0 40px #ff8c00;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse-glow {
+    from {
+        transform: scale(1);
+        filter: brightness(1);
+    }
+    to {
+        transform: scale(1.1);
+        filter: brightness(1.3);
+    }
+}
+
+/* ============================================
+   SCOREBOARD
+   ============================================ */
+
+.scoreboard {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.player-score {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
+    border-radius: 20px;
+    padding: 15px 25px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.player-score:hover {
+    transform: translateY(-3px);
+    box-shadow:
+        0 12px 40px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.player1-score {
+    border-color: var(--red);
+    box-shadow: 0 8px 32px rgba(255, 71, 87, 0.3);
+}
+
+.player2-score {
+    border-color: var(--yellow);
+    box-shadow: 0 8px 32px rgba(255, 211, 42, 0.3);
+}
+
+.player-avatar {
+    font-size: 2.5rem;
+    animation: float 2s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
+.player-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.player-name {
+    color: var(--white);
+    font-weight: 700;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.score {
+    font-family: 'Fredoka One', cursive;
+    font-size: 2rem;
+    color: var(--gold);
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.stars {
+    display: flex;
+    gap: 2px;
+    font-size: 1.2rem;
+}
+
+.vs-badge {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.5rem;
+    color: var(--white);
+    background: linear-gradient(145deg, #ff6b6b, #ffd93d);
+    padding: 8px 15px;
+    border-radius: 50px;
+    animation: pulse 1.5s ease-in-out infinite;
+    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+/* ============================================
+   MAX SCORE INFO
+   ============================================ */
+
+.max-score-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--white);
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+    background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.2), transparent);
+    padding: 8px 20px;
+    border-radius: 50px;
+}
+
+.trophy {
+    font-size: 1.3rem;
+    animation: shake 0.5s ease-in-out infinite;
+}
+
+@keyframes shake {
+    0%, 100% { transform: rotate(-5deg); }
+    50% { transform: rotate(5deg); }
+}
+
+/* ============================================
+   TURN INDICATOR
+   ============================================ */
+
+.turn-indicator {
+    margin-bottom: 15px;
+}
+
+.turn-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+    padding: 10px 25px;
+    border-radius: 50px;
+    border: 3px solid;
+    transition: all 0.3s ease;
+}
+
+.turn-badge.player1 {
+    border-color: var(--red);
+    box-shadow: 0 0 20px rgba(255, 71, 87, 0.5);
+}
+
+.turn-badge.player2 {
+    border-color: var(--yellow);
+    box-shadow: 0 0 20px rgba(255, 211, 42, 0.5);
+}
+
+.turn-emoji {
+    font-size: 1.8rem;
+    animation: bounce 0.6s ease-in-out infinite;
+}
+
+.turn-text {
+    color: var(--white);
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+#current-player-name {
+    color: var(--gold);
+}
+
+/* ============================================
+   GAME STATUS
+   ============================================ */
+
+.status {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.5rem;
+    min-height: 40px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.status.winner {
+    color: var(--success);
+    animation: winner-pulse 0.5s ease-in-out infinite alternate;
+}
+
+.status.draw {
+    color: #a55eea;
+}
+
+@keyframes winner-pulse {
+    from { transform: scale(1); filter: brightness(1); }
+    to { transform: scale(1.1); filter: brightness(1.3); }
+}
+
+/* ============================================
+   GAME BOARD
+   ============================================ */
+
+.board-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+    perspective: 1000px;
+}
+
+.board-frame {
+    background: linear-gradient(145deg, #4a69ff, var(--board-primary));
+    padding: 15px;
+    border-radius: 25px;
+    box-shadow:
+        0 15px 50px rgba(55, 66, 250, 0.5),
+        0 5px 20px rgba(0, 0, 0, 0.3),
+        inset 0 2px 10px rgba(255, 255, 255, 0.2),
+        inset 0 -5px 20px rgba(0, 0, 0, 0.2);
+    border: 4px solid var(--board-glow);
+    animation: board-glow 3s ease-in-out infinite alternate;
+}
+
+@keyframes board-glow {
+    from { box-shadow: 0 15px 50px rgba(55, 66, 250, 0.5), 0 0 30px rgba(83, 82, 237, 0.3); }
+    to { box-shadow: 0 15px 50px rgba(55, 66, 250, 0.7), 0 0 50px rgba(83, 82, 237, 0.5); }
+}
+
+.board {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    grid-template-rows: repeat(6, 1fr);
+    gap: 10px;
+    background: linear-gradient(180deg, var(--board-secondary), var(--board-primary));
+    padding: 12px;
+    border-radius: 15px;
+}
+
+.cell {
+    width: 55px;
+    height: 55px;
+    background: radial-gradient(circle at 30% 30%, #2a1b4e, #1a0d33);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow:
+        inset 0 6px 12px rgba(0, 0, 0, 0.6),
+        inset 0 -3px 6px rgba(255, 255, 255, 0.05),
+        0 2px 4px rgba(0, 0, 0, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.cell::before {
+    content: '';
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    right: 5px;
+    bottom: 5px;
+    border-radius: 50%;
+    background: transparent;
+    transition: background 0.2s ease;
+}
+
+.cell:hover:not(.red):not(.yellow) {
+    transform: scale(1.1);
+    box-shadow:
+        inset 0 6px 12px rgba(0, 0, 0, 0.6),
+        0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+.cell:hover:not(.red):not(.yellow)::before {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Red disc */
+.cell.red {
+    background: radial-gradient(circle at 30% 30%, #ff8a8a, var(--red), var(--red-dark));
+    box-shadow:
+        inset 0 4px 10px rgba(255, 255, 255, 0.4),
+        inset 0 -4px 10px rgba(0, 0, 0, 0.3),
+        0 4px 15px rgba(255, 71, 87, 0.6);
+    cursor: default;
+}
+
+/* Yellow disc */
+.cell.yellow {
+    background: radial-gradient(circle at 30% 30%, #fff176, var(--yellow), var(--yellow-dark));
+    box-shadow:
+        inset 0 4px 10px rgba(255, 255, 255, 0.4),
+        inset 0 -4px 10px rgba(0, 0, 0, 0.3),
+        0 4px 15px rgba(255, 211, 42, 0.6);
+    cursor: default;
+}
+
+/* Winning cells */
+.cell.winning {
+    animation: winning-celebration 0.5s ease-in-out infinite alternate;
+}
+
+.cell.winning.red {
+    box-shadow:
+        0 0 30px 10px rgba(255, 71, 87, 0.8),
+        inset 0 4px 10px rgba(255, 255, 255, 0.4);
+}
+
+.cell.winning.yellow {
+    box-shadow:
+        0 0 30px 10px rgba(255, 211, 42, 0.8),
+        inset 0 4px 10px rgba(255, 255, 255, 0.4);
+}
+
+@keyframes winning-celebration {
+    from { transform: scale(1) rotate(-5deg); }
+    to { transform: scale(1.15) rotate(5deg); }
+}
+
+/* Drop animation */
+@keyframes dropIn {
+    0% {
+        transform: translateY(-500px) rotate(0deg);
+        opacity: 0;
+    }
+    50% {
+        opacity: 1;
+    }
+    70% {
+        transform: translateY(15px) rotate(10deg);
+    }
+    85% {
+        transform: translateY(-8px) rotate(-5deg);
+    }
+    100% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+    }
+}
+
+.cell.drop-animation {
+    animation: dropIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+/* ============================================
+   BOMB EXPLOSION ANIMATIONS
+   ============================================ */
+
+/* Explosion animation for the bomb cell */
+@keyframes explosion {
+    0% { transform: scale(1); }
+    10% { transform: scale(1.3); background: radial-gradient(circle at 30% 30%, #ff8888, #ff4444) !important; }
+    20% { transform: scale(0.9); }
+    30% { transform: scale(1.2); background: radial-gradient(circle at 30% 30%, #ffcc00, #ff8800) !important; }
+    40% { transform: scale(1); }
+    50% { transform: scale(1.1) rotate(5deg); }
+    60% { transform: scale(1) rotate(-5deg); }
+    70% { transform: scale(1.05) rotate(3deg); }
+    100% { transform: scale(1) rotate(0); }
+}
+
+.cell.explosion {
+    animation: explosion 0.6s ease-out;
+    z-index: 10;
+    box-shadow:
+        0 0 30px 15px rgba(255, 68, 68, 0.8),
+        0 0 60px 30px rgba(255, 136, 0, 0.5) !important;
+}
+
+/* Disc removal animation */
+@keyframes discRemoved {
+    0% { transform: scale(1); opacity: 1; }
+    30% { transform: scale(1.2); opacity: 0.8; }
+    100% { transform: scale(0) rotate(180deg); opacity: 0; }
+}
+
+.cell.disc-removed {
+    animation: discRemoved 0.5s ease-in forwards;
+}
+
+/* Screen shake effect for dramatic impact */
+@keyframes screenShake {
+    0%, 100% { transform: translateX(0); }
+    10% { transform: translateX(-8px) rotate(-1deg); }
+    20% { transform: translateX(8px) rotate(1deg); }
+    30% { transform: translateX(-6px) rotate(-0.5deg); }
+    40% { transform: translateX(6px) rotate(0.5deg); }
+    50% { transform: translateX(-4px); }
+    60% { transform: translateX(4px); }
+    70% { transform: translateX(-2px); }
+    80% { transform: translateX(2px); }
+}
+
+.board-frame.shake {
+    animation: screenShake 0.5s ease-out;
+}
+
+/* Bomb message styling */
+@keyframes bombPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.status.bomb-message {
+    color: #ff6b6b !important;
+    text-shadow: 0 0 20px rgba(255, 68, 68, 0.8);
+    animation: bombPulse 0.3s ease-in-out 3;
+}
+
+/* ============================================
+   JACKPOT ANIMATIONS
+   ============================================ */
+
+/* Jackpot trigger cell glow animation */
+@keyframes jackpotGlow {
+    0% { transform: scale(1); }
+    25% { transform: scale(1.2); box-shadow: 0 0 30px 15px gold; }
+    50% { transform: scale(1.1); }
+    75% { transform: scale(1.15); box-shadow: 0 0 40px 20px gold; }
+    100% { transform: scale(1); }
+}
+
+.cell.jackpot-trigger {
+    animation: jackpotGlow 0.8s ease-out;
+    z-index: 10;
+}
+
+/* Column fill cascade animation */
+@keyframes jackpotFill {
+    0% { transform: scale(0); opacity: 0; }
+    50% { transform: scale(1.3); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.cell.jackpot-fill {
+    animation: jackpotFill 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+/* Jackpot message styling */
+@keyframes jackpotPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+}
+
+.status.jackpot-message {
+    color: #ffd700 !important;
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 0 40px rgba(255, 215, 0, 0.5);
+    animation: jackpotPulse 0.3s ease-in-out 3;
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+.controls {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 25px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.btn-icon {
+    font-size: 1.3rem;
+}
+
+.btn-reset {
+    background: linear-gradient(145deg, #00b894, #00a381);
+    color: white;
+    box-shadow: 0 6px 20px rgba(0, 184, 148, 0.4);
+}
+
+.btn-reset:hover {
+    background: linear-gradient(145deg, #00d9b0, #00b894);
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 10px 30px rgba(0, 184, 148, 0.5);
+}
+
+.btn-new-game {
+    background: linear-gradient(145deg, #6c5ce7, #5b4cdb);
+    color: white;
+    box-shadow: 0 6px 20px rgba(108, 92, 231, 0.4);
+}
+
+.btn-new-game:hover {
+    background: linear-gradient(145deg, #7d6ff0, #6c5ce7);
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 10px 30px rgba(108, 92, 231, 0.5);
+}
+
+.btn:active {
+    transform: translateY(0) scale(0.98);
+}
+
+/* ============================================
+   INSTRUCTIONS
+   ============================================ */
+
+.instructions {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+    border-radius: 20px;
+    padding: 20px;
+    max-width: 500px;
+    margin: 0 auto;
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.instructions-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.5rem;
+    color: var(--white);
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.sparkle {
+    animation: sparkle 1s ease-in-out infinite;
+}
+
+@keyframes sparkle {
+    0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    50% { transform: scale(1.2) rotate(180deg); opacity: 0.8; }
+}
+
+.instructions-content {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.instruction-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--white);
+    font-size: 1rem;
+    padding: 8px 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    transition: transform 0.2s ease;
+}
+
+.instruction-item:hover {
+    transform: translateX(5px);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.instruction-icon {
+    font-size: 1.5rem;
+}
+
+/* ============================================
+   MODALS
+   ============================================ */
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.3s ease;
+}
+
+.modal.show {
+    display: flex;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background: linear-gradient(145deg, #2d1b4e, #1e0533);
+    border-radius: 30px;
+    padding: 40px;
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+    border: 4px solid var(--gold);
+    box-shadow:
+        0 0 50px rgba(255, 215, 0, 0.3),
+        0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: modalPop 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    position: relative;
+    overflow: hidden;
+}
+
+@keyframes modalPop {
+    from { transform: scale(0.5) rotate(-10deg); opacity: 0; }
+    to { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+.winner-crown {
+    font-size: 4rem;
+    animation: crown-bounce 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes crown-bounce {
+    from { transform: translateY(0) rotate(-5deg); }
+    to { transform: translateY(-10px) rotate(5deg); }
+}
+
+.winner-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 2.5rem;
+    color: var(--gold);
+    margin: 10px 0;
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+}
+
+.winner-avatar {
+    font-size: 5rem;
+    margin: 15px 0;
+    animation: winner-dance 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes winner-dance {
+    from { transform: scale(1) rotate(-10deg); }
+    to { transform: scale(1.1) rotate(10deg); }
+}
+
+.winner-points {
+    margin: 20px 0;
+}
+
+.points-label {
+    display: block;
+    color: var(--white);
+    font-size: 1.1rem;
+    margin-bottom: 5px;
+}
+
+.points-value {
+    font-family: 'Fredoka One', cursive;
+    font-size: 3rem;
+    color: var(--success);
+    text-shadow: 0 0 20px rgba(46, 213, 115, 0.5);
+    animation: points-pop 0.5s ease-out;
+}
+
+@keyframes points-pop {
+    from { transform: scale(0); }
+    50% { transform: scale(1.3); }
+    to { transform: scale(1); }
+}
+
+.btn-continue {
+    background: linear-gradient(145deg, var(--gold), #ffc107);
+    color: #1a0d33;
+    font-size: 1.2rem;
+    padding: 15px 40px;
+    margin-top: 10px;
+    box-shadow: 0 6px 25px rgba(255, 215, 0, 0.5);
+}
+
+.btn-continue:hover {
+    background: linear-gradient(145deg, #ffe066, var(--gold));
+    transform: translateY(-3px) scale(1.05);
+}
+
+/* Champion Modal */
+.champion-content {
+    border-color: #ff6b6b;
+    background: linear-gradient(145deg, #4a1c6b, #2d1b4e);
+}
+
+.champion-trophy {
+    font-size: 6rem;
+    animation: trophy-shine 1s ease-in-out infinite;
+}
+
+@keyframes trophy-shine {
+    0%, 100% {
+        transform: scale(1) rotate(0deg);
+        filter: brightness(1);
+    }
+    50% {
+        transform: scale(1.1) rotate(5deg);
+        filter: brightness(1.3);
+    }
+}
+
+.champion-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 3rem;
+    background: linear-gradient(45deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff, #c44dff);
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: rainbow 2s ease infinite;
+    margin: 10px 0;
+}
+
+@keyframes rainbow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.champion-avatar {
+    font-size: 5rem;
+    margin: 15px 0;
+}
+
+.champion-name {
+    font-family: 'Fredoka One', cursive;
+    font-size: 2rem;
+    color: var(--white);
+}
+
+.champion-score {
+    margin: 20px 0;
+    color: var(--white);
+    font-size: 1.2rem;
+}
+
+.final-score {
+    display: block;
+    font-family: 'Fredoka One', cursive;
+    font-size: 4rem;
+    color: var(--gold);
+    text-shadow: 0 0 30px rgba(255, 215, 0, 0.7);
+}
+
+.celebration-text {
+    font-size: 1.5rem;
+    margin: 15px 0;
+    animation: celebration 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes celebration {
+    from { transform: scale(1); }
+    to { transform: scale(1.1); }
+}
+
+.btn-new-championship {
+    background: linear-gradient(145deg, #ff6b6b, #ee5a5a);
+    color: white;
+    font-size: 1.2rem;
+    padding: 15px 40px;
+    box-shadow: 0 6px 25px rgba(255, 107, 107, 0.5);
+}
+
+.btn-new-championship:hover {
+    background: linear-gradient(145deg, #ff8a8a, #ff6b6b);
+    transform: translateY(-3px) scale(1.05);
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+@media (max-width: 700px) {
+    .game-title {
+        font-size: 2.5rem;
+    }
+
+    .number {
+        font-size: 3.5rem;
+    }
+
+    .cell {
+        width: 42px;
+        height: 42px;
+    }
+
+    .board {
+        gap: 6px;
+        padding: 8px;
+    }
+
+    .board-frame {
+        padding: 10px;
+    }
+
+    .scoreboard {
+        gap: 10px;
+    }
+
+    .player-score {
+        padding: 10px 15px;
+    }
+
+    .player-avatar {
+        font-size: 2rem;
+    }
+
+    .score {
+        font-size: 1.5rem;
+    }
+
+    .vs-badge {
+        font-size: 1.2rem;
+        padding: 6px 12px;
+    }
+}
+
+@media (max-width: 500px) {
+    .game-title {
+        font-size: 2rem;
+    }
+
+    .number {
+        font-size: 2.8rem;
+    }
+
+    .cell {
+        width: 34px;
+        height: 34px;
+    }
+
+    .board {
+        gap: 5px;
+        padding: 6px;
+    }
+
+    .board-frame {
+        padding: 8px;
+        border-radius: 15px;
+    }
+
+    .player-score {
+        padding: 8px 12px;
+    }
+
+    .player-name {
+        font-size: 0.8rem;
+    }
+
+    .score {
+        font-size: 1.3rem;
+    }
+
+    .btn {
+        padding: 10px 18px;
+        font-size: 0.9rem;
+    }
+
+    .modal-content {
+        padding: 25px;
+    }
+
+    .winner-title, .champion-title {
+        font-size: 2rem;
+    }
+
+    .winner-avatar, .champion-avatar {
+        font-size: 4rem;
+    }
+}
+
+@media (max-width: 380px) {
+    .cell {
+        width: 28px;
+        height: 28px;
+    }
+
+    .board {
+        gap: 4px;
+    }
+
+    .game-title {
+        font-size: 1.6rem;
+    }
+
+    .number {
+        font-size: 2.2rem;
+    }
+}

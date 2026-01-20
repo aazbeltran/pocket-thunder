@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conecta 4 - Super Divertido!</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="stars-bg" id="stars-bg"></div>
+    <div class="confetti-container" id="confetti"></div>
+
+    <div class="game-container">
+        <div class="title-container">
+            <h1 class="game-title">
+                <span class="letter" style="--i:0">C</span>
+                <span class="letter" style="--i:1">O</span>
+                <span class="letter" style="--i:2">N</span>
+                <span class="letter" style="--i:3">E</span>
+                <span class="letter" style="--i:4">C</span>
+                <span class="letter" style="--i:5">T</span>
+                <span class="letter" style="--i:6">A</span>
+                <span class="number">4</span>
+            </h1>
+        </div>
+
+        <div class="scoreboard">
+            <div class="player-score player1-score">
+                <div class="player-avatar">🔴</div>
+                <div class="player-info">
+                    <span class="player-name">Jugador 1</span>
+                    <span class="score" id="score1">0</span>
+                </div>
+                <div class="stars" id="stars1"></div>
+            </div>
+            <div class="vs-badge">VS</div>
+            <div class="player-score player2-score">
+                <div class="player-avatar">🟡</div>
+                <div class="player-info">
+                    <span class="player-name">Jugador 2</span>
+                    <span class="score" id="score2">0</span>
+                </div>
+                <div class="stars" id="stars2"></div>
+            </div>
+        </div>
+
+        <div class="max-score-info">
+            <span class="trophy">🏆</span>
+            <span>Meta: <strong>120 puntos</strong></span>
+            <span class="trophy">🏆</span>
+        </div>
+
+        <div class="turn-indicator">
+            <div class="turn-badge" id="turn-badge">
+                <span class="turn-emoji" id="turn-emoji">🔴</span>
+                <span class="turn-text">Turno de <span id="current-player-name">Jugador 1</span></span>
+            </div>
+        </div>
+
+        <div id="game-status" class="status"></div>
+
+        <div class="board-wrapper">
+            <div class="board-frame">
+                <div id="board" class="board"></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="reset-btn" class="btn btn-reset">
+                <span class="btn-icon">🔄</span>
+                <span>Nueva Ronda</span>
+            </button>
+            <button id="new-game-btn" class="btn btn-new-game">
+                <span class="btn-icon">🎮</span>
+                <span>Nuevo Juego</span>
+            </button>
+        </div>
+
+        <div class="instructions">
+            <div class="instructions-title">
+                <span class="sparkle">✨</span>
+                <span>Como jugar</span>
+                <span class="sparkle">✨</span>
+            </div>
+            <div class="instructions-content">
+                <div class="instruction-item">
+                    <span class="instruction-icon">👆</span>
+                    <span>Toca una columna para soltar tu ficha</span>
+                </div>
+                <div class="instruction-item">
+                    <span class="instruction-icon">4️⃣</span>
+                    <span>Conecta 4 fichas en linea para ganar</span>
+                </div>
+                <div class="instruction-item">
+                    <span class="instruction-icon">⭐</span>
+                    <span>Gana rapido para obtener mas puntos!</span>
+                </div>
+                <div class="instruction-item">
+                    <span class="instruction-icon">🏆</span>
+                    <span>El primero en llegar a 120 puntos gana!</span>
+                </div>
+                <div class="instruction-item">
+                    <span class="instruction-icon">💣</span>
+                    <span>Cuidado! Hay bombas escondidas que quitan fichas!</span>
+                </div>
+                <div class="instruction-item">
+                    <span class="instruction-icon">🎰</span>
+                    <span>Encuentra el jackpot y llena toda la columna!</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="winner-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-fireworks" id="modal-fireworks"></div>
+            <div class="winner-crown">👑</div>
+            <h2 class="winner-title" id="winner-title">Ganador!</h2>
+            <div class="winner-avatar" id="winner-avatar">🔴</div>
+            <div class="winner-points">
+                <span class="points-label">Puntos ganados:</span>
+                <span class="points-value" id="points-earned">+30</span>
+            </div>
+            <button class="btn btn-continue" id="continue-btn">
+                <span class="btn-icon">🚀</span>
+                <span>Continuar</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="champion-modal" class="modal">
+        <div class="modal-content champion-content">
+            <div class="champion-confetti" id="champion-confetti"></div>
+            <div class="champion-trophy">🏆</div>
+            <h2 class="champion-title">CAMPEON!</h2>
+            <div class="champion-avatar" id="champion-avatar">🔴</div>
+            <div class="champion-name" id="champion-name">Jugador 1</div>
+            <div class="champion-score">
+                <span>Puntuacion Final:</span>
+                <span class="final-score" id="final-score">120</span>
+            </div>
+            <div class="celebration-text">🎉 Felicidades! 🎉</div>
+            <button class="btn btn-new-championship" id="new-championship-btn">
+                <span class="btn-icon">🎮</span>
+                <span>Nuevo Campeonato</span>
+            </button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
