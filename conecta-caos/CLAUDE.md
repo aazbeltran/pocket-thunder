@@ -95,7 +95,7 @@ Example: `removePlayerDiscs()` updates `this.board` and `this.playerCells` immed
 
 **Audio**: Uses Web Audio API oscillators for sound effects (drop, win, champion, explosion, jackpot, alien, vortex)
 
-**Win Detection**: Checks 4 directions (horizontal, vertical, both diagonals) from last placed disc position. After mod effects, must find disc's **actual** position (may have moved due to gravity).
+**Win Detection**: After mod effects complete, `scanBoardForWin()` performs a **full board scan** checking 4 directions (horizontal, vertical, both diagonals) from every occupied cell. This is necessary because mod effects (like Vórtice Reverso) can create wins anywhere on the board, not just where the last disc landed.
 
 **DOM Updates**: Uses `getCellElement(row, col)` to query cells by data attributes. `rerenderBoard()` syncs entire visual board to match `this.board` state.
 
@@ -104,6 +104,11 @@ Example: `removePlayerDiscs()` updates `this.board` and `this.playerCells` immed
 **Shared utilities** available to all mods:
 - `shuffleArray(array)` - Fisher-Yates shuffle, mutates array in place
 - `selectRandomAvailablePosition(excludeModId)` - Returns random "row,col" string avoiding positions occupied by other mods
+
+**Board state helpers** (critical for mods that remove/relocate discs):
+- `applyGravity(col)` - Applies gravity to column with visual drop animation
+- `applyGravitySyncBoardOnly(col)` - Updates `board` and `playerCells` state only, no visual changes (use before animations)
+- `rerenderBoard()` - Syncs entire visual board to match `this.board` state (call after state changes complete)
 
 ## Adding New Mods
 
