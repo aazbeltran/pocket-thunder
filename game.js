@@ -1,6 +1,6 @@
 /**
- * Connect 4 Game - SUPER FUN KIDS EDITION
- * 9 columns x 6 rows with scoring system
+ * Conecta Caos (Connect Chaos)
+ * 9 columns x 6 rows with scoring system and wild mods!
  *
  * Scoring:
  * - Win faster = more points (max 30 per round)
@@ -171,7 +171,7 @@ const MOD_DEFINITIONS = {
     }
 };
 
-class Connect4Game {
+class ConnectChaosGame {
     constructor() {
         this.board = [];
         this.currentPlayer = PLAYER_1;
@@ -1770,5 +1770,5 @@ class Connect4Game {
 
 // Start the game
 document.addEventListener('DOMContentLoaded', () => {
-    new Connect4Game();
+    new ConnectChaosGame();
 });
