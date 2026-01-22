@@ -552,31 +552,22 @@ class Connect4Game {
     }
 
     /**
-     * Fill an entire column with the current player's color
-     * Overrides opponent discs and fills empty cells
+     * Fill empty cells in a column with the current player's color
+     * Only fills empty cells - existing discs (both players) are preserved
      * @param {number} col - Column to fill
      * @param {number} player - Player number (1 or 2)
      * @returns {Promise} Resolves when cascade animation completes
      */
     fillColumn(col, player) {
         return new Promise((resolve) => {
-            const opponent = player === PLAYER_1 ? PLAYER_2 : PLAYER_1;
             const colorClass = player === PLAYER_1 ? 'red' : 'yellow';
-            const opponentColorClass = opponent === PLAYER_1 ? 'red' : 'yellow';
             let cellsToFill = [];
 
-            // Collect all cells that need to be filled (from top to bottom for cascade)
+            // Collect only EMPTY cells (from top to bottom for cascade)
             for (let row = 0; row < ROWS; row++) {
-                const currentState = this.board[row][col];
-
-                if (currentState === EMPTY) {
-                    // Empty cell - add to player
-                    cellsToFill.push({ row, col, type: 'empty' });
-                } else if (currentState === opponent) {
-                    // Opponent's disc - override it
-                    cellsToFill.push({ row, col, type: 'override' });
+                if (this.board[row][col] === EMPTY) {
+                    cellsToFill.push(row);
                 }
-                // Player's own disc - skip (already owned)
             }
 
             if (cellsToFill.length === 0) {
@@ -585,27 +576,15 @@ class Connect4Game {
             }
 
             // Apply cascade animation with staggered delays
-            cellsToFill.forEach((cellInfo, index) => {
+            cellsToFill.forEach((row, index) => {
                 setTimeout(() => {
-                    const cell = this.getCellElement(cellInfo.row, col);
+                    const cell = this.getCellElement(row, col);
 
                     // Update board state
-                    this.board[cellInfo.row][col] = player;
-
-                    // Handle opponent disc override
-                    if (cellInfo.type === 'override') {
-                        // Remove from opponent's tracking
-                        const opponentIdx = this.playerCells[opponent].findIndex(
-                            ([r, c]) => r === cellInfo.row && c === col
-                        );
-                        if (opponentIdx !== -1) {
-                            this.playerCells[opponent].splice(opponentIdx, 1);
-                        }
-                        cell.classList.remove(opponentColorClass);
-                    }
+                    this.board[row][col] = player;
 
                     // Add to current player's tracking
-                    this.playerCells[player].push([cellInfo.row, col]);
+                    this.playerCells[player].push([row, col]);
 
                     // Apply visual changes
                     cell.classList.remove('drop-animation');
@@ -618,8 +597,8 @@ class Connect4Game {
                     if (index === cellsToFill.length - 1) {
                         setTimeout(() => {
                             // Remove animation class from all filled cells
-                            cellsToFill.forEach(({ row }) => {
-                                const c = this.getCellElement(row, col);
+                            cellsToFill.forEach((r) => {
+                                const c = this.getCellElement(r, col);
                                 c.classList.remove('jackpot-fill');
                             });
                             resolve();
