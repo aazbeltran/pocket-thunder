@@ -1285,20 +1285,16 @@ class Connect4Game {
             }
         }
 
-        // After mod effects (bombs, jackpots), the disc might have moved due to gravity
-        // Find the actual position of the disc in this column after all effects
-        let actualRow = row;
-        for (let r = ROWS - 1; r >= 0; r--) {
-            if (this.board[r][col] === player) {
-                // Check if this is likely our disc (in the same column, at or below original position)
-                // Due to gravity, discs can only move DOWN, so check from bottom up
-                actualRow = r;
-                break;
+        // After mod effects (alien abduction, bombs, jackpots), wins can occur ANYWHERE
+        // on the board for ANY player. Do a full board scan.
+        const winResult = this.scanBoardForWin();
+        if (winResult) {
+            // Set the winning player (may differ from current player due to mod effects!)
+            this.winningCells = winResult.cells;
+            // If the winner is different from current player, switch to them for handleWin
+            if (winResult.winner !== this.currentPlayer) {
+                this.currentPlayer = winResult.winner;
             }
-        }
-
-        // Check win at the ACTUAL position (after any gravity effects)
-        if (this.checkWin(actualRow, col)) {
             this.handleWin();
             return;
         }
@@ -1319,7 +1315,7 @@ class Connect4Game {
     }
 
     /**
-     * Check for win
+     * Check for win from a specific position
      */
     checkWin(row, col) {
         const player = this.board[row][col];
@@ -1333,6 +1329,30 @@ class Connect4Game {
             }
         }
         return false;
+    }
+
+    /**
+     * Scan entire board for any winning condition
+     * Returns { winner: player, cells: winningCells } or null if no winner
+     * Used after mod effects that can create wins anywhere on the board
+     */
+    scanBoardForWin() {
+        const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
+
+        for (let row = 0; row < ROWS; row++) {
+            for (let col = 0; col < COLS; col++) {
+                const player = this.board[row][col];
+                if (player === EMPTY) continue;
+
+                for (const [dRow, dCol] of directions) {
+                    const cells = this.countInDirection(row, col, dRow, dCol, player);
+                    if (cells.length >= 4) {
+                        return { winner: player, cells };
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     /**
