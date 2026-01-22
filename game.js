@@ -138,6 +138,36 @@ const MOD_DEFINITIONS = {
         getOccupiedPositions(game) {
             return game.alienSlotPosition ? new Set([game.alienSlotPosition]) : new Set();
         }
+    },
+
+    vorticeReverso: {
+        id: 'vorticeReverso',
+        name: 'Vórtice Reverso',
+        emoji: '🌀',
+        description: 'Un agujero negro invierte todos los colores del tablero!',
+
+        // Initialize mod state
+        onCreate(game) {
+            game.vortexPosition = null;
+        },
+
+        // Place single hidden vortex slot on board creation
+        onBoardCreate(game) {
+            game.vortexPosition = game.selectRandomAvailablePosition('vorticeReverso');
+        },
+
+        // Check for vortex trigger after disc is dropped
+        async onDiscDropped(game, row, col, player) {
+            if (game.vortexPosition === `${row},${col}`) {
+                game.vortexPosition = null;
+                await game.triggerVortexReversal(row, col);
+            }
+        },
+
+        // Get occupied positions (for other mods to avoid)
+        getOccupiedPositions(game) {
+            return game.vortexPosition ? new Set([game.vortexPosition]) : new Set();
+        }
     }
 };
 
@@ -396,6 +426,7 @@ class Connect4Game {
         const bombInstruction = document.querySelector('.instruction-bombs');
         const jackpotInstruction = document.querySelector('.instruction-jackpot');
         const alienInstruction = document.querySelector('.instruction-alien');
+        const vortexInstruction = document.querySelector('.instruction-vortex');
 
         if (bombInstruction) {
             bombInstruction.style.display = this.activeMods.has('bombas') ? 'flex' : 'none';
@@ -405,6 +436,9 @@ class Connect4Game {
         }
         if (alienInstruction) {
             alienInstruction.style.display = this.activeMods.has('michiAlien') ? 'flex' : 'none';
+        }
+        if (vortexInstruction) {
+            vortexInstruction.style.display = this.activeMods.has('vorticeReverso') ? 'flex' : 'none';
         }
     }
 
@@ -506,6 +540,22 @@ class Connect4Game {
                     gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + i * 0.15 + 0.3);
                     osc.start(this.audioContext.currentTime + i * 0.15);
                     osc.stop(this.audioContext.currentTime + i * 0.15 + 0.3);
+                });
+                break;
+            case 'vortex':
+                // Cosmic vortex sound - descending then ascending warble (black hole -> white hole)
+                const vortexNotes = [880, 659, 440, 330, 220, 330, 440, 659, 880];  // A5 down to A3, back up
+                vortexNotes.forEach((freq, i) => {
+                    const osc = this.audioContext.createOscillator();
+                    const gain = this.audioContext.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.audioContext.destination);
+                    osc.type = 'sine';  // Smooth cosmic tone
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.25, this.audioContext.currentTime + i * 0.18);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + i * 0.18 + 0.35);
+                    osc.start(this.audioContext.currentTime + i * 0.18);
+                    osc.stop(this.audioContext.currentTime + i * 0.18 + 0.35);
                 });
                 break;
         }
@@ -968,6 +1018,105 @@ class Connect4Game {
         await new Promise(resolve => setTimeout(resolve, 800));
         this.statusElement.textContent = '';
         this.statusElement.classList.remove('alien-message');
+    }
+
+    /* ============================================
+       VÓRTICE REVERSO - COLOR SWAP METHODS
+       ============================================ */
+
+    /**
+     * Trigger vortex reversal - swap all disc colors on the board
+     * Black hole → discs spiral in → darkness → white hole → discs explode out with swapped colors
+     * @param {number} row - Trigger position row
+     * @param {number} col - Trigger position column
+     */
+    async triggerVortexReversal(row, col) {
+        const triggerCell = this.getCellElement(row, col);
+
+        // Play vortex sound
+        this.playSound('vortex');
+
+        // Show initial message
+        this.statusElement.textContent = '🌀 VÓRTICE DETECTADO! 🌀';
+        this.statusElement.classList.add('vortex-message');
+
+        // Phase 1: Black hole appears at trigger position
+        triggerCell.classList.add('vortex-black-hole');
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        // Phase 2: Collect all disc positions for animation
+        const allDiscPositions = [
+            ...this.playerCells[PLAYER_1].map(pos => ({ row: pos[0], col: pos[1], player: PLAYER_1 })),
+            ...this.playerCells[PLAYER_2].map(pos => ({ row: pos[0], col: pos[1], player: PLAYER_2 }))
+        ];
+
+        // All discs spiral into black hole (staggered animation)
+        allDiscPositions.forEach((disc, index) => {
+            setTimeout(() => {
+                const cell = this.getCellElement(disc.row, disc.col);
+                cell.classList.add('vortex-spiral-in');
+            }, index * 40);
+        });
+
+        // Wait for all spiral animations to complete
+        const totalSpiralTime = Math.max(0, (allDiscPositions.length - 1) * 40) + 800;
+        await new Promise(resolve => setTimeout(resolve, totalSpiralTime));
+
+        // Phase 3: Brief darkness (remove all disc visuals)
+        this.statusElement.textContent = '🌑 Inversión Cósmica... 🌑';
+        allDiscPositions.forEach(disc => {
+            const cell = this.getCellElement(disc.row, disc.col);
+            cell.classList.remove('red', 'yellow', 'vortex-spiral-in');
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 600));
+
+        // Phase 4: SWAP BOARD STATE (synchronously)
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                if (this.board[r][c] === PLAYER_1) {
+                    this.board[r][c] = PLAYER_2;
+                } else if (this.board[r][c] === PLAYER_2) {
+                    this.board[r][c] = PLAYER_1;
+                }
+            }
+        }
+
+        // Swap playerCells tracking arrays
+        const temp = this.playerCells[PLAYER_1];
+        this.playerCells[PLAYER_1] = this.playerCells[PLAYER_2];
+        this.playerCells[PLAYER_2] = temp;
+
+        // Phase 5: White hole explosion - discs reappear with swapped colors
+        triggerCell.classList.remove('vortex-black-hole');
+        triggerCell.classList.add('vortex-white-hole');
+        this.statusElement.textContent = '⚪ EXPLOSIÓN REVERSA! ⚪';
+
+        // Re-render board to show swapped colors
+        this.rerenderBoard();
+
+        // Stagger white-hole explosion effect on all discs
+        allDiscPositions.forEach((disc, index) => {
+            setTimeout(() => {
+                const cell = this.getCellElement(disc.row, disc.col);
+                cell.classList.add('vortex-explode-out');
+
+                // Remove animation class after completion
+                setTimeout(() => {
+                    cell.classList.remove('vortex-explode-out');
+                }, 800);
+            }, index * 40);
+        });
+
+        const totalExplodeTime = Math.max(0, (allDiscPositions.length - 1) * 40) + 800;
+        await new Promise(resolve => setTimeout(resolve, totalExplodeTime));
+
+        // Phase 6: Cleanup
+        triggerCell.classList.remove('vortex-white-hole');
+        await new Promise(resolve => setTimeout(resolve, 600));
+
+        this.statusElement.textContent = '';
+        this.statusElement.classList.remove('vortex-message');
     }
 
     /**
