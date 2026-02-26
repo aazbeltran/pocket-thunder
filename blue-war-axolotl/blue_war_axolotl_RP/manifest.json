@@ -1,0 +1,17 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "Blue War Axolotl RP",
+    "description": "Resource pack for the Blue War Axolotl - a flying, sword-wielding companion",
+    "uuid": "f1ecbd30-44b6-4ec6-a3c4-faf389bb36c3",
+    "version": [1, 0, 0],
+    "min_engine_version": [1, 21, 0]
+  },
+  "modules": [
+    {
+      "type": "resources",
+      "uuid": "d30bacd2-c743-4c43-8769-2c7782d6354c",
+      "version": [1, 0, 0]
+    }
+  ]
+}

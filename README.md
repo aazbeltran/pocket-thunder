@@ -9,6 +9,7 @@ Not production. Not stable. Not serious. Just curiosity and tiny bursts of "wow.
 | Project | Description | Play |
 |---------|-------------|------|
 | [Conecta Caos](conecta-caos/) | Chaotic Connect 4 with wild mods | [Play](https://aazbeltran.github.io/pocket-thunder/conecta-caos/) |
+| [Blue War Axolotl](blue-war-axolotl/) | Flying sword-wielding axolotl for Minecraft Bedrock | `bash build.sh` |
 
 ## What is This?
 

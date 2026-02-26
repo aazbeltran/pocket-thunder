@@ -1,0 +1,23 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "Blue War Axolotl BP",
+    "description": "Behavior pack for the Blue War Axolotl - a flying, sword-wielding companion",
+    "uuid": "6cbec0e6-f01a-4bc7-b620-b11caf0b944f",
+    "version": [1, 0, 0],
+    "min_engine_version": [1, 21, 0]
+  },
+  "modules": [
+    {
+      "type": "data",
+      "uuid": "436b216e-f61a-4b07-9c14-ae67bcd11099",
+      "version": [1, 0, 0]
+    }
+  ],
+  "dependencies": [
+    {
+      "uuid": "f1ecbd30-44b6-4ec6-a3c4-faf389bb36c3",
+      "version": [1, 0, 0]
+    }
+  ]
+}

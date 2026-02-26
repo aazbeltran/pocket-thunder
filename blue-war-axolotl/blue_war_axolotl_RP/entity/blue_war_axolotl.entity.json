@@ -1,0 +1,36 @@
+{
+  "format_version": "1.10.0",
+  "minecraft:client_entity": {
+    "description": {
+      "identifier": "pt:blue_war_axolotl",
+      "materials": {
+        "default": "entity_alphatest"
+      },
+      "textures": {
+        "default": "textures/entity/blue_war_axolotl"
+      },
+      "geometry": {
+        "default": "geometry.blue_war_axolotl"
+      },
+      "animations": {
+        "idle": "animation.blue_war_axolotl.idle",
+        "fly": "animation.blue_war_axolotl.fly",
+        "attack": "animation.blue_war_axolotl.attack",
+        "look_at_target": "animation.common.look_at_target",
+        "controller.main": "controller.animation.blue_war_axolotl.main"
+      },
+      "scripts": {
+        "animate": [
+          "controller.main"
+        ]
+      },
+      "render_controllers": [
+        "controller.render.blue_war_axolotl"
+      ],
+      "spawn_egg": {
+        "base_color": "#1B3B8C",
+        "overlay_color": "#5ED8F0"
+      }
+    }
+  }
+}

@@ -1,0 +1,191 @@
+{
+  "format_version": "1.21.0",
+  "minecraft:entity": {
+    "description": {
+      "identifier": "pt:blue_war_axolotl",
+      "runtime_identifier": "minecraft:bee",
+      "is_spawnable": true,
+      "is_summonable": true,
+      "is_experimental": false
+    },
+    "component_groups": {
+      "pt:wild": {
+        "minecraft:behavior.random_hover": {
+          "priority": 12,
+          "xz_dist": 3,
+          "y_dist": 2,
+          "y_offset": -1,
+          "interval": 2,
+          "hover_height": [1, 2]
+        },
+        "minecraft:behavior.tempt": {
+          "priority": 3,
+          "speed_multiplier": 1.5,
+          "within_radius": 10,
+          "can_tempt_vertically": true,
+          "items": ["minecraft:tropical_fish"]
+        },
+        "minecraft:behavior.look_at_player": {
+          "priority": 4,
+          "look_distance": 8.0,
+          "probability": 0.1
+        },
+        "minecraft:tameable": {
+          "probability": 1.0,
+          "tame_items": "minecraft:tropical_fish",
+          "tame_event": {
+            "event": "pt:on_tame",
+            "target": "self"
+          }
+        }
+      },
+      "pt:tamed": {
+        "minecraft:is_tamed": {},
+        "minecraft:persistent": {},
+        "minecraft:sittable": {},
+        "minecraft:behavior.follow_owner": {
+          "priority": 6,
+          "speed_multiplier": 1.0,
+          "start_distance": 10,
+          "stop_distance": 2,
+          "can_teleport": true
+        },
+        "minecraft:behavior.owner_hurt_by_target": {
+          "priority": 1
+        },
+        "minecraft:behavior.owner_hurt_target": {
+          "priority": 2
+        },
+        "minecraft:behavior.stay_while_sitting": {
+          "priority": 3
+        },
+        "minecraft:behavior.random_hover": {
+          "priority": 12,
+          "xz_dist": 4,
+          "y_dist": 4,
+          "y_offset": -1,
+          "interval": 1,
+          "hover_height": [1, 3]
+        }
+      },
+      "pt:combat_ready": {
+        "minecraft:equipment": {
+          "table": "loot_tables/entities/blue_war_axolotl_equipment.json"
+        },
+        "minecraft:behavior.melee_box_attack": {
+          "priority": 4,
+          "speed_multiplier": 1.4,
+          "track_target": true
+        },
+        "minecraft:behavior.nearest_attackable_target": {
+          "priority": 5,
+          "must_see": true,
+          "reselect_targets": true,
+          "within_radius": 16,
+          "entity_types": [
+            {
+              "filters": {
+                "test": "is_family",
+                "subject": "other",
+                "value": "monster"
+              },
+              "max_dist": 16
+            }
+          ]
+        },
+        "minecraft:behavior.hurt_by_target": {
+          "priority": 1
+        }
+      }
+    },
+    "components": {
+      "minecraft:type_family": {
+        "family": ["blue_war_axolotl", "mob"]
+      },
+      "minecraft:spawn_egg_interaction": {},
+      "minecraft:is_hidden_when_invisible": {},
+      "minecraft:nameable": {},
+      "minecraft:leashable": {},
+      "minecraft:collision_box": {
+        "width": 0.55,
+        "height": 0.5
+      },
+      "minecraft:scale": {
+        "value": 0.8
+      },
+      "minecraft:health": {
+        "value": 30,
+        "max": 30
+      },
+      "minecraft:attack": {
+        "damage": 8,
+        "effect_name": "slowness",
+        "effect_duration": 3
+      },
+      "minecraft:can_fly": {},
+      "minecraft:flying_speed": {
+        "value": 0.15
+      },
+      "minecraft:navigation.hover": {
+        "can_path_over_water": true,
+        "can_sink": false,
+        "can_pass_doors": true,
+        "can_path_from_air": true,
+        "avoid_water": false,
+        "avoid_damage_blocks": true,
+        "avoid_sun": false
+      },
+      "minecraft:movement.hover": {},
+      "minecraft:movement": {
+        "value": 0.3
+      },
+      "minecraft:jump.static": {},
+      "minecraft:physics": {},
+      "minecraft:pushable": {
+        "is_pushable": true,
+        "is_pushable_by_piston": true
+      },
+      "minecraft:damage_sensor": {
+        "triggers": [
+          {
+            "cause": "fall",
+            "deals_damage": false
+          }
+        ]
+      },
+      "minecraft:breathable": {
+        "total_supply": 15,
+        "suffocate_time": 0,
+        "breathes_water": true,
+        "breathes_air": true
+      },
+      "minecraft:behavior.float": {
+        "priority": 0
+      },
+      "minecraft:behavior.look_at_player": {
+        "priority": 8,
+        "look_distance": 6.0,
+        "probability": 0.02
+      },
+      "minecraft:loot": {
+        "table": "loot_tables/entities/blue_war_axolotl.json"
+      },
+      "minecraft:equip_item": {}
+    },
+    "events": {
+      "minecraft:entity_spawned": {
+        "add": {
+          "component_groups": ["pt:wild"]
+        }
+      },
+      "pt:on_tame": {
+        "remove": {
+          "component_groups": ["pt:wild"]
+        },
+        "add": {
+          "component_groups": ["pt:tamed", "pt:combat_ready"]
+        }
+      }
+    }
+  }
+}

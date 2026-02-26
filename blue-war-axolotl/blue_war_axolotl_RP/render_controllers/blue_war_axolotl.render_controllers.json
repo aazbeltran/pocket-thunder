@@ -1,0 +1,16 @@
+{
+  "format_version": "1.8.0",
+  "render_controllers": {
+    "controller.render.blue_war_axolotl": {
+      "geometry": "geometry.default",
+      "materials": [
+        {
+          "*": "material.default"
+        }
+      ],
+      "textures": [
+        "texture.default"
+      ]
+    }
+  }
+}
