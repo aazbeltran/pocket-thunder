@@ -6,8 +6,6 @@ on:
     paths:
       - 'blue-war-axolotl/**'
       - '.github/workflows/blue-war-axolotl.yml'
-    tags:
-      - 'bwa-v*'
   pull_request:
     paths:
       - 'blue-war-axolotl/**'
@@ -19,6 +17,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Validate JSON files
         run: |
@@ -40,9 +40,27 @@ jobs:
           name: blue_war_axolotl
           path: blue-war-axolotl/blue_war_axolotl.mcaddon
 
+      - name: Detect existing release tags
+        id: release_tags
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          if git tag -l 'bwa-v*' | grep -q .; then
+            echo "has_tags=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_tags=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set first release tag
+        id: first_release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.release_tags.outputs.has_tags == 'false'
+        run: |
+          echo "tag=bwa-v0.1.0" >> "$GITHUB_OUTPUT"
+
       - name: Create release
-        if: startsWith(github.ref, 'refs/tags/bwa-v')
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.release_tags.outputs.has_tags == 'false'
         uses: softprops/action-gh-release@v2
         with:
-          files: blue-war-axolotl/blue_war_axolotl.mcaddon
+          tag_name: ${{ steps.first_release.outputs.tag }}
+          name: ${{ steps.first_release.outputs.tag }}
           generate_release_notes: true
+          files: blue-war-axolotl/blue_war_axolotl.mcaddon
