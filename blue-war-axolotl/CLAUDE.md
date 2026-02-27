@@ -39,6 +39,24 @@ A Minecraft Bedrock Edition addon (.mcaddon) that adds a **Blue War Axolotl** --
 bash build.sh
 ```
 
+## CI and Release
+
+- Workflow: `.github/workflows/blue-war-axolotl.yml`
+- Every relevant push/PR builds the addon and uploads `blue_war_axolotl.mcaddon` as a workflow artifact.
+- The workflow force-creates the first GitHub release only once (tag: `bwa-v0.1.0`) if no `bwa-v*` tags exist yet.
+- Release publishing uses `softprops/action-gh-release` with `generate_release_notes: true`.
+
+## Contribution Notes
+
+- Use Conventional Commits for commit messages (example: `feat(blue-war-axolotl): add tame particle effect`).
+- Do not commit generated build outputs; `blue-war-axolotl/*.mcaddon` is ignored by git.
+- Before pushing, run:
+
+```bash
+find blue-war-axolotl -name '*.json' -print0 | while IFS= read -r -d '' f; do python3 -m json.tool "$f" >/dev/null; done
+bash blue-war-axolotl/build.sh
+```
+
 ## Reference Files
 
 Source patterns based on official Bedrock samples:
