@@ -2,10 +2,7 @@ name: Blue War Axolotl Build
 
 on:
   push:
-    branches: [main]
-    paths:
-      - 'blue-war-axolotl/**'
-      - '.github/workflows/blue-war-axolotl.yml'
+    branches: [main, master]
   pull_request:
     paths:
       - 'blue-war-axolotl/**'
@@ -40,27 +37,66 @@ jobs:
           name: blue_war_axolotl
           path: blue-war-axolotl/blue_war_axolotl.mcaddon
 
-      - name: Detect existing release tags
-        id: release_tags
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: Fetch release tags
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        run: git fetch --tags --force
+
+      - name: Compute next release tag
+        id: next_release
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
         run: |
-          if git tag -l 'bwa-v*' | grep -q .; then
-            echo "has_tags=true" >> "$GITHUB_OUTPUT"
+          latest_tag="$(git tag -l 'bwa-v*' | sort -V | tail -n 1)"
+
+          if [ -n "$latest_tag" ]; then
+            commits="$(git log --format=%B "${latest_tag}..HEAD")"
+            version="${latest_tag#bwa-v}"
           else
-            echo "has_tags=false" >> "$GITHUB_OUTPUT"
+            commits="$(git log --format=%B)"
+            version="0.0.0"
           fi
 
-      - name: Set first release tag
-        id: first_release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.release_tags.outputs.has_tags == 'false'
-        run: |
-          echo "tag=bwa-v0.1.0" >> "$GITHUB_OUTPUT"
+          if echo "$commits" | grep -Eiq 'BREAKING CHANGE|^[a-zA-Z]+(\([^)]+\))?!:'; then
+            bump="major"
+          elif echo "$commits" | grep -Eiq '^feat(\([^)]+\))?:'; then
+            bump="minor"
+          elif echo "$commits" | grep -Eiq '^(fix|chore|docs|style|refactor|perf|test|build|ci|revert)(\([^)]+\))?:'; then
+            bump="patch"
+          else
+            bump="none"
+          fi
+
+          if [ "$bump" = "none" ]; then
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          IFS='.' read -r major minor patch <<< "$version"
+
+          case "$bump" in
+            major)
+              major=$((major + 1))
+              minor=0
+              patch=0
+              ;;
+            minor)
+              minor=$((minor + 1))
+              patch=0
+              ;;
+            patch)
+              patch=$((patch + 1))
+              ;;
+          esac
+
+          next_tag="bwa-v${major}.${minor}.${patch}"
+          echo "tag=${next_tag}" >> "$GITHUB_OUTPUT"
+          echo "bump=${bump}" >> "$GITHUB_OUTPUT"
+          echo "should_release=true" >> "$GITHUB_OUTPUT"
 
       - name: Create release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.release_tags.outputs.has_tags == 'false'
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && steps.next_release.outputs.should_release == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.first_release.outputs.tag }}
-          name: ${{ steps.first_release.outputs.tag }}
+          tag_name: ${{ steps.next_release.outputs.tag }}
+          name: ${{ steps.next_release.outputs.tag }} (${{ steps.next_release.outputs.bump }})
           generate_release_notes: true
           files: blue-war-axolotl/blue_war_axolotl.mcaddon
